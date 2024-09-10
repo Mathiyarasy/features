@@ -16,8 +16,8 @@
             "nvidia-cuda": {
                 "installCudnn": true,
                 "installNvtx": true,
-                "cudaVersion": "11.7",
-                "cudnnVersion": "8.5.0.96"
+                "cudaVersion": "12.3",
+                "cudnnVersion": "9.4.0.58"
             }
         }
     }
