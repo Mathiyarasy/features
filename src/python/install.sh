@@ -36,6 +36,7 @@ PYTHON_SOURCE_GPG_KEYS="64E628F8D684696D B26995E310250568 2D347EA6AA65421D FB992
 KEYSERVER_PROXY="${HTTPPROXY:-"${HTTP_PROXY:-""}"}"
 
 set -e
+echo "Inside python script"
 
 if [ "$(id -u)" -ne 0 ]; then
     echo -e 'Script must be run as root. Use sudo, su, or add "USER root" to your Dockerfile before running this script.'
@@ -60,6 +61,8 @@ else
     exit 1
 fi
 
+echo "Inside python ID"
+
 if [ "${ADJUSTED_ID}" = "rhel" ] && [ "${VERSION_CODENAME-}" = "centos7" ]; then
     # As of 1 July 2024, mirrorlist.centos.org no longer exists.
     # Update the repo files to reference vault.centos.org.
@@ -68,6 +71,7 @@ if [ "${ADJUSTED_ID}" = "rhel" ] && [ "${VERSION_CODENAME-}" = "centos7" ]; then
     sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
 fi
 
+echo "Inside Adjusted ID"
 # To find some devel packages, some rhel need to enable specific extra repos, but not on RedHat ubi images...
 INSTALL_CMD_ADDL_REPO=""
 if [ ${ADJUSTED_ID} = "rhel" ] && [ ${ID} != "rhel" ]; then
@@ -93,6 +97,9 @@ else
     INSTALL_CMD="${PKG_MGR_CMD} ${INSTALL_CMD_ADDL_REPOS} -y install --noplugins --setopt=install_weak_deps=0"
 fi
 
+echo "Inside INSTALL_CMD "
+
+
 # Clean up
 clean_up() {
     case ${ADJUSTED_ID} in
@@ -108,6 +115,7 @@ clean_up() {
 }
 clean_up
 
+echo "AFTER Cleanup"
 
 
 updaterc() {
@@ -670,6 +678,7 @@ sys.prefix == sys.base_prefix and print(sysconfig.get_path("stdlib", sysconfig.g
 rm -f /etc/profile.d/00-restore-env.sh
 echo "export PATH=${PATH//$(sh -lc 'echo $PATH')/\$PATH}" > /etc/profile.d/00-restore-env.sh
 chmod +x /etc/profile.d/00-restore-env.sh
+echo "After restore env"
 
 # Some distributions do not install awk by default (e.g. Mariner)
 if ! type awk >/dev/null 2>&1; then
@@ -692,6 +701,8 @@ if [ "${USERNAME}" = "auto" ] || [ "${USERNAME}" = "automatic" ]; then
 elif [ "${USERNAME}" = "none" ] || ! id -u ${USERNAME} > /dev/null 2>&1; then
     USERNAME=root
 fi
+
+echo "After Username assigned:" $USERNAME
 
 # Ensure apt is in non-interactive to avoid prompts
 export DEBIAN_FRONTEND=noninteractive
@@ -896,6 +907,7 @@ if [[ "${INSTALL_PYTHON_TOOLS}" = "true" ]] && [[ -n "${PYTHON_SRC}" ]]; then
     updaterc "export PIPX_BIN_DIR=\"${PIPX_BIN_DIR}\""
     updaterc "if [[ \"\${PATH}\" != *\"\${PIPX_BIN_DIR}\"* ]]; then export PATH=\"\${PATH}:\${PIPX_BIN_DIR}\"; fi"
 fi
+echo "After Python installed:" 
 
 # Install JupyterLab if needed
 if [ "${INSTALL_JUPYTERLAB}" = "true" ]; then
@@ -903,6 +915,8 @@ if [ "${INSTALL_JUPYTERLAB}" = "true" ]; then
         echo "(!) Could not install Jupyterlab. Python not found."
         exit 1
     fi
+
+   echo "INSTALL_JUPYTERLAB USERNAME": $USERNAME
 
     INSTALL_UNDER_ROOT=true
     if [ "$(id -u)" -eq 0 ] && [ "$USERNAME" != "root" ]; then
@@ -912,7 +926,11 @@ if [ "${INSTALL_JUPYTERLAB}" = "true" ]; then
     install_user_package $INSTALL_UNDER_ROOT jupyterlab
     install_user_package $INSTALL_UNDER_ROOT jupyterlab-git
 
+   echo "Install Under ROOT": $INSTALL_UNDER_ROOT
+   
     if [ "$INSTALL_UNDER_ROOT" = false ]; then
+       echo "Inside Under ROOT false": $INSTALL_UNDER_ROOT
+       echo $PATH
         # JupyterLab would have installed into /home/${USERNAME}/.local/bin
         # Adding it to default path for Codespaces which use non-login shells
         SUDOERS_FILE="/etc/sudoers.d/$USERNAME"
@@ -921,11 +939,24 @@ if [ "${INSTALL_JUPYTERLAB}" = "true" ]; then
 
         if grep -qs ${SEARCH_STR} ${SUDOERS_FILE}; then
             # string found and file is present
+            echo "Inside first if"
             sed -i "s|${SEARCH_STR}|${REPLACE_STR}:|g" "${SUDOERS_FILE}"
+            echo $PATH
         else
             # either string is not found, or file is not present
             # In either case take same action, note >> places at end of file
+            echo "Inside else if"
             echo "${REPLACE_STR}:${PATH}" >> ${SUDOERS_FILE}
+            if [[ ":$PATH:" != *":/home/${USERNAME}/.local/bin:"* ]]; then
+              echo "Inside PATH CHECK"
+              #export PATH=$PATH:/home/${USERNAME}/.local/bin
+              #echo "PATH=\"/home/${USERNAME}/.local/bin:\$PATH\"" >> /etc/environment
+              NEW_PATH="/home/${USERNAME}/.local/bin"
+              CURRENT_PATH=$(grep -E '^PATH=' /etc/environment | tail -n 1 | cut -d '"' -f 2)
+              UPDATED_PATH="${NEW_PATH}:${CURRENT_PATH}"
+              sed -i "s|^PATH=.*|PATH=\"${UPDATED_PATH}\"|" /etc/environment
+            fi
+            echo $PATH
         fi
     fi
 
@@ -938,9 +969,10 @@ if [ "${INSTALL_JUPYTERLAB}" = "true" ]; then
         fi
 
         CONFIG_FILE="$CONFIG_DIR/jupyter_server_config.py"
-
-        add_user_jupyter_config $CONFIG_DIR $CONFIG_FILE "c.ServerApp.allow_origin = '${CONFIGURE_JUPYTERLAB_ALLOW_ORIGIN}'"
-        add_user_jupyter_config $CONFIG_DIR $CONFIG_FILE "c.NotebookApp.allow_origin = '${CONFIGURE_JUPYTERLAB_ALLOW_ORIGIN}'"
+        echo $CONFIG_DIR
+        echo "Inside Configure JupyterLab if needed"
+        #add_user_jupyter_config $CONFIG_DIR $CONFIG_FILE "c.ServerApp.allow_origin = '${CONFIGURE_JUPYTERLAB_ALLOW_ORIGIN}'"
+        #add_user_jupyter_config $CONFIG_DIR $CONFIG_FILE "c.NotebookApp.allow_origin = '${CONFIGURE_JUPYTERLAB_ALLOW_ORIGIN}'"
     fi
 fi
 
