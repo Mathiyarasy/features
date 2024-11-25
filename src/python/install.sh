@@ -63,6 +63,12 @@ fi
 
 echo "Inside python ID"
 
+echo "Path value before any change" $PATH
+echo "Print Environment file"
+cat /etc/environment
+echo "Print Environment values"
+env
+
 if [ "${ADJUSTED_ID}" = "rhel" ] && [ "${VERSION_CODENAME-}" = "centos7" ]; then
     # As of 1 July 2024, mirrorlist.centos.org no longer exists.
     # Update the repo files to reference vault.centos.org.
@@ -947,19 +953,8 @@ if [ "${INSTALL_JUPYTERLAB}" = "true" ]; then
             # In either case take same action, note >> places at end of file
             echo "Inside else if"
             echo "${REPLACE_STR}:${PATH}" >> ${SUDOERS_FILE}
-            if [[ ":$PATH:" != *":/home/${USERNAME}/.local/bin:"* ]]; then
-              echo "Inside PATH CHECK"
-              #export PATH=$PATH:/home/${USERNAME}/.local/bin
-              #echo "PATH=\"/home/${USERNAME}/.local/bin:\$PATH\"" >> /etc/environment
-              NEW_PATH="/home/${USERNAME}/.local/bin"
-              CURRENT_PATH=$(grep -E '^PATH=' /etc/environment | tail -n 1 | cut -d '"' -f 2)
-              UPDATED_PATH="${NEW_PATH}:${CURRENT_PATH}"
-              sed -i "s|^PATH=.*|PATH=\"${UPDATED_PATH}\"|" /etc/environment
-            fi
-            echo $PATH
         fi
     fi
-
     # Configure JupyterLab if needed
     if [ -n "${CONFIGURE_JUPYTERLAB_ALLOW_ORIGIN}" ]; then
         # Resolve config directory
@@ -967,7 +962,10 @@ if [ "${INSTALL_JUPYTERLAB}" = "true" ]; then
         if [ "$INSTALL_UNDER_ROOT" = false ]; then
             CONFIG_DIR="/home/$USERNAME/.jupyter"
         fi
-
+        export JUPYTER_CONFIG_DIR=${CONFIG_DIR} >> /etc/profile
+        export PATH=$PATH:${CONFIG_DIR} >> /etc/profile
+        #updaterc "export JUPYTER_CONFIG_DIR=\"${CONFIG_DIR}\""
+        #updaterc "if [[ \"\${PATH}\" != *\"\${JUPYTER_CONFIG_DIR}\"* ]]; then export PATH=\"\${PATH}:\${JUPYTER_CONFIG_DIR}\"; fi"
         CONFIG_FILE="$CONFIG_DIR/jupyter_server_config.py"
         echo $CONFIG_DIR
         echo "Inside Configure JupyterLab if needed"
