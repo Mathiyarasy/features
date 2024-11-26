@@ -56,6 +56,8 @@ elif [ "${USERNAME}" = "none" ] || ! id -u ${USERNAME} > /dev/null 2>&1; then
     USERNAME=root
 fi
 
+echo "USERNAME: $USERNAME"
+
 updaterc() {
     if [ "${UPDATE_RC}" = "true" ]; then
         echo "Updating /etc/bash.bashrc and /etc/zsh/zshrc..."
@@ -238,6 +240,7 @@ if [ "${architecture}" != "amd64" ] && [ "${architecture}" != "x86_64" ] && [ "$
     echo "(!) Architecture $architecture unsupported"
     exit 1
 fi
+echo "Architecture: $architecture"
 
 # Install dependencies
 check_packages curl ca-certificates software-properties-common build-essential gnupg2 libreadline-dev \
@@ -247,6 +250,7 @@ if ! type git > /dev/null 2>&1; then
     check_packages git
 fi
 
+echo 'After Check Packages'
 # Function to fetch the version released prior to the latest version
 get_previous_version() {
     local url=$1
@@ -280,10 +284,12 @@ get_github_api_repo_url() {
 }
 
 
+echo 'Installing ruby version $RUBY_VERSION'
 # Figure out correct version of a three part version number is not passed
 RUBY_URL="https://github.com/ruby/ruby"
 ORIGINAL_RUBY_VERSION=$RUBY_VERSION
 find_version_from_git_tags RUBY_VERSION $RUBY_URL "tags/v" "_"
+echo 'after find version from git tags'
 
 set_rvm_install_args() {
     RUBY_VERSION=$1
@@ -307,11 +313,31 @@ set_rvm_install_args() {
     fi
 }
 
+check_and_install_openssl1_1() {
+    # Check if OpenSSL is installed and its version
+    if ! openssl version | grep -q "1.1."; then
+        echo "OpenSSL 1.1 is not installed or the version does not match. Installing OpenSSL 1.1..."
+        wget https://www.openssl.org/source/openssl-1.1.1l.tar.gz
+        tar -xzvf openssl-1.1.1l.tar.gz
+        cd openssl-1.1.1l
+        ./config --prefix=/usr/local/openssl-1.1 --openssldir=/usr/local/openssl-1.1
+        make
+        sudo make install
+        cd ..
+        rm -rf openssl-1.1.1l openssl-1.1.1l.tar.gz
+    else
+        echo "OpenSSL 1.1 is already installed."
+    fi
+}
+
 install_previous_version() {
+    echo "Attempting to install previous version of Ruby..."
+    echo "Original Ruby version"$ORIGINAL_RUBY_VERSION
     if [[ $ORIGINAL_RUBY_VERSION == "latest" ]]; then
         repo_url=$(get_github_api_repo_url "$RUBY_URL")
         get_previous_version "${RUBY_URL}" "${repo_url}" RUBY_VERSION
         set_rvm_install_args $RUBY_VERSION
+        echo "curl -sSL https://get.rvm.io | bash -s stable --ignore-dotfiles ${RVM_INSTALL_ARGS} --with-default-gems="${DEFAULT_GEMS}" 2>&1"
         curl -sSL https://get.rvm.io | bash -s stable --ignore-dotfiles ${RVM_INSTALL_ARGS} --with-default-gems="${DEFAULT_GEMS}" 2>&1
     else 
         echo "Failed to install Ruby version $ORIGINAL_RUBY_VERSION. Exiting..."
@@ -330,28 +356,41 @@ if rvm --version > /dev/null; then
     SKIP_GEM_INSTALL="false"
     SKIP_RBENV_RBUILD="true"
 else
+   echo "Installing Ruby Version Manager..."
     # Install RVM
     receive_gpg_keys RVM_GPG_KEYS
+    echo " eceive_gpg_keys..."
     # Determine appropriate settings for rvm installer
     set_rvm_install_args $RUBY_VERSION
+    echo "set_rvm_install_args..."
     # Create rvm group as a system group to reduce the odds of conflict with local user UIDs
     if ! cat /etc/group | grep -e "^rvm:" > /dev/null 2>&1; then
         groupadd -r rvm
     fi
+    echo "install rvm..."
+    echo "curl -sSL https://get.rvm.io | bash -s stable --ignore-dotfiles ${RVM_INSTALL_ARGS} --with-default-gems="${DEFAULT_GEMS}""
     # Install rvm
     curl -sSL https://get.rvm.io | bash -s stable --ignore-dotfiles ${RVM_INSTALL_ARGS} --with-default-gems="${DEFAULT_GEMS}" 2>&1 || install_previous_version
+    #curl -sSL https://get.rvm.io | bash -s stable --ignore-dotfiles ${RVM_INSTALL_ARGS} --with-default-gems="${DEFAULT_GEMS}" 2>&1
+
+    echo "rvm installation completed..."
+    echo $RVM_INSTALL_ARGS
+    echo $DEFAULT_GEMS
+    exit 1
+
     usermod -aG rvm ${USERNAME}
     source /usr/local/rvm/scripts/rvm
     rvm fix-permissions system
     rm -rf ${GNUPGHOME}
 fi
-
+echo "outside if rvm installation completed..."
 if [ "${INSTALL_RUBY_TOOLS}" = "true" ]; then   
     # Non-root user may not have "gem" in path when script is run and no ruby version
     # is installed by rvm, so handle this by using root's default gem in this case
     ROOT_GEM="$(which gem || echo "")"
     ${ROOT_GEM} install ${DEFAULT_GEMS}
 fi
+echo "ROOT_GEM..."
 
 # VS Code server usually first in the path, so silence annoying rvm warning (that does not apply) and then source it
 updaterc "if ! grep rvm_silence_path_mismatch_check_flag \$HOME/.rvmrc > /dev/null 2>&1; then echo 'rvm_silence_path_mismatch_check_flag=1' >> \$HOME/.rvmrc; fi\nsource /usr/local/rvm/scripts/rvm > /dev/null 2>&1"

@@ -29,7 +29,7 @@
         }
     },
     "test_python_project": {
-        "image": "ubuntu:focal",
+        "image": "mcr.microsoft.com/devcontainers/python:dev-3.9-bookworm",
         "features": {
             "python": {
                 "version": "3.10.4",

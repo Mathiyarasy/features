@@ -21,5 +21,13 @@
                 "version": "latest"
             }
         }
+    },
+    "install_ruby_version": {
+        "image": "ubuntu",
+        "features": {
+            "ruby": {
+                "version": "2.7.6"
+            }
+        }
     }
 }
