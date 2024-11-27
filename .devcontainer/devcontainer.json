@@ -2,7 +2,11 @@
     "image": "mcr.microsoft.com/devcontainers/javascript-node:1-18",
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-        "./features/python": {}
+        "./features/python": {
+            "version": "3.10",
+            "installJupyterlab": true,
+            "configureJupyterlabAllowOrigin": "*"
+        }
     },
     "postCreateCommand": "npm install -g @devcontainers/cli",
     "hostRequirements": {
