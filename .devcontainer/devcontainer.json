@@ -12,7 +12,6 @@
     "hostRequirements": {
         "cpus": 4
     },
-    "containerUser": "vscode",
     "customizations": {
         "vscode": {
             "extensions": [
