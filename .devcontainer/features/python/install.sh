@@ -591,6 +591,8 @@ install_user_package() {
     INSTALL_UNDER_ROOT="$1"
     PACKAGE="$2"
 
+    echo $PYTHON_SRC
+
     if [ "$INSTALL_UNDER_ROOT" = true ]; then
         sudo_if "${PYTHON_SRC}" -m pip install --upgrade --no-cache-dir "$PACKAGE"
     else
@@ -913,27 +915,13 @@ if [ "${INSTALL_JUPYTERLAB}" = "true" ]; then
     install_user_package $INSTALL_UNDER_ROOT jupyterlab-git
 
     if [ "$INSTALL_UNDER_ROOT" = false ]; then
-        # JupyterLab would have installed into /home/${USERNAME}/.local/bin
-        # Adding it to default path for Codespaces which use non-login shells
-        SUDOERS_FILE="/etc/sudoers.d/$USERNAME"
-        SEARCH_STR="Defaults secure_path="
-        REPLACE_STR="Defaults secure_path=/home/${USERNAME}/.local/bin"
-
-        if grep -qs ${SEARCH_STR} ${SUDOERS_FILE}; then
-            # string found and file is present
-            sed -i "s|${SEARCH_STR}|${REPLACE_STR}:|g" "${SUDOERS_FILE}"
-        else
-            # either string is not found, or file is not present
-            # In either case take same action, note >> places at end of file
-            echo "${REPLACE_STR}:${PATH}" >> ${SUDOERS_FILE}
-            JUPYTER_INPATH=/home/${USERNAME}/.local/bin
-            if [ ! -d "$JUPYTER_INPATH" ]; then
-                echo "Error: $JUPYTER_INPATH does not exist."
-                exit 1
-            fi
-            JUPYTER_PATH=/usr/local/jupyter
-            ln -s "$JUPYTER_INPATH" "$JUPYTER_PATH"
+        JUPYTER_INPATH=/home/${USERNAME}/.local/bin
+        if [ ! -d "$JUPYTER_INPATH" ]; then
+            echo "Error: $JUPYTER_INPATH does not exist."
+            exit 1
         fi
+        JUPYTER_PATH=/usr/local/jupyter
+        ln -s "$JUPYTER_INPATH" "$JUPYTER_PATH"
     fi
 
     # Configure JupyterLab if needed
