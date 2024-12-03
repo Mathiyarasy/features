@@ -11,12 +11,5 @@
     "postCreateCommand": "npm install -g @devcontainers/cli",
     "hostRequirements": {
         "cpus": 4
-    },
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "mads-hartmann.bash-ide-vscode"
-            ]
-        }
     }
 }
