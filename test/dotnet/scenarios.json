@@ -4,7 +4,7 @@
         "remoteUser": "vscode",
         "features": {
             "dotnet": {
-                "version": "lts"
+                "version": "6.0"
             }
         }
     },
