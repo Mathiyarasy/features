@@ -916,17 +916,16 @@ if [ "${INSTALL_JUPYTERLAB}" = "true" ]; then
 
     if [ "$INSTALL_UNDER_ROOT" = false ]; then
         JUPYTER_INPATH=/home/${USERNAME}/.local/bin
-    else
-        JUPYTER_INPATH=/root/.local/bin
+        if [ ! -d "$JUPYTER_INPATH" ]; then
+         echo "Error: $JUPYTER_INPATH does not exist."
+         exit 1
+        fi
+    
+        JUPYTER_PATH=/usr/local/jupyter
+        ln -s "$JUPYTER_INPATH" "$JUPYTER_PATH"
     fi
 
-    if [ ! -d "$JUPYTER_INPATH" ]; then
-        echo "Error: $JUPYTER_INPATH does not exist."
-        exit 1
-    fi
     
-    JUPYTER_PATH=/usr/local/jupyter
-    ln -s "$JUPYTER_INPATH" "$JUPYTER_PATH"
 
     # Configure JupyterLab if needed
     if [ -n "${CONFIGURE_JUPYTERLAB_ALLOW_ORIGIN}" ]; then
