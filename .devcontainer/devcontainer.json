@@ -2,10 +2,10 @@
     "image": "mcr.microsoft.com/devcontainers/go:1-1.23-bullseye",
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-        "./features/python": {
-            "version": "3.10",
+        "ghcr.io/devcontainers/features/python:1": {
+            "installTools": true,
             "installJupyterlab": true,
-            "configureJupyterlabAllowOrigin": "*"
+            "version": "3.9"
         }
     },
     "postCreateCommand": "npm install -g @devcontainers/cli",
