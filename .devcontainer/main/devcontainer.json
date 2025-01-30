@@ -1,0 +1,12 @@
+{
+  "name": "main-app",
+  "dockerComposeFile": "../compose.yml",
+  "service": "main",
+  "workspaceFolder": "/workspaces/multi-devcontainers-with-feature-bug-test",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20.18.0"
+    }
+  }
+}
