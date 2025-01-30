@@ -1,0 +1,12 @@
+services:
+  main:
+    image: mcr.microsoft.com/devcontainers/base:ubuntu
+    tty: true
+    volumes:
+      - ..:/workspaces/multi-devcontainers-with-feature-bug-test
+
+  sub:
+    image: mcr.microsoft.com/devcontainers/base:ubuntu
+    tty: true
+    volumes:
+      - ..:/workspaces/multi-devcontainers-with-feature-bug-test
