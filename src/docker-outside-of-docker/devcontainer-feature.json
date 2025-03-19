@@ -30,8 +30,7 @@
             "enum": [
                 "none",
                 "v1",
-                "v2",
-                "latest"
+                "v2"
             ],
             "default": "v2",
             "description": "Compose version to use for docker-compose (v1 or v2 or none)"
