@@ -38,6 +38,14 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
+# Validate DOCKER_DASH_COMPOSE_VERSION
+valid_compose_versions=("none" "v1" "v2" "latest")
+if [[ ! " ${valid_compose_versions[@]} " =~ " ${DOCKER_DASH_COMPOSE_VERSION} " ]]; then
+    echo "Error: Invalid value for DOCKER_DASH_COMPOSE_VERSION: '${DOCKER_DASH_COMPOSE_VERSION}'."
+    echo "Allowed values are: ${valid_compose_versions[*]}"
+    exit 1
+fi
+
 # Determine the appropriate non-root user
 if [ "${USERNAME}" = "auto" ] || [ "${USERNAME}" = "automatic" ]; then
     USERNAME=""
@@ -154,27 +162,27 @@ get_previous_version() {
     prev_version=${!variable_name}
     
     output=$(curl -s "$repo_url");
-
     check_packages jq
-
-    message=$(echo "$output" | jq -r '.message')
-    
-    if [[ $message == "API rate limit exceeded"* ]]; then
-        echo -e "\nAn attempt to find latest version using GitHub Api Failed... \nReason: ${message}"
-        echo -e "\nAttempting to find latest version using GitHub tags."
-        find_prev_version_from_git_tags prev_version "$url" "tags/v"
-        declare -g ${variable_name}="${prev_version}"
-    else 
-        echo -e "\nAttempting to find latest version using GitHub Api."
-        version=$(echo "$output" | jq -r '.tag_name')
+    echo "Output type: $(echo "$output" | jq -e 'type')"
+    if echo "$output" | jq -e 'type == "object"' > /dev/null; then
+        message=$(echo "$output" | jq -r '.message')
+        if [[ $message == "API rate limit exceeded"* ]]; then
+            echo -e "\nAn attempt to find previous to latest version using GitHub Api Failed... \nReason: ${message}"
+            echo -e "\nAttempting to find previous to latest version using GitHub tags."
+            find_prev_version_from_git_tags prev_version "$url" "tags/v"
+            declare -g ${variable_name}="${prev_version}"
+        fi
+    elif echo "$output" | jq -e 'type == "array"' > /dev/null; then
+        echo -e "\nAttempting to find previous version using GitHub Api."
+        version=$(echo "$output" | jq -r '.[1].tag_name')
         declare -g ${variable_name}="${version#v}"
     fi  
-    echo "${variable_name}=${!variable_name}"
+    echo "${variable_name}=${!variable_name}" 
 }
 
 get_github_api_repo_url() {
     local url=$1
-    echo "${url/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest"
+    echo "${url/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases"
 }
 
 install_compose_switch_fallback() {
